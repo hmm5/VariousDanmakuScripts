@@ -1,5 +1,7 @@
 # VariousDanmakuScripts
-DISCLAIMER:  I am not a programmer, and somewhat amazed that these scripts I wrote up even work.  Therefore the code is ugly and hackish looking.  Hopefully though, these scripts can help someone out who wants to do something similar.  None of these scripts display on mpv in a danmaku style, but rather an IRC style. 
+These scripts are used to display various streaming site (twitch, huya, douyu) chat on mpv or record chat and video to a file to be viewed later.
+
+DISCLAIMER:  I am not a programmer, and have never before written anything using python or lua and somewhat amazed that these scripts I wrote up even work.  Therefore the code is ugly and hackish looking and there are probably much better ways of doing things.  Hopefully though, these scripts can help someone out who wants to do something similar.  None of these scripts display chat on mpv in a danmaku style, but rather an IRC style. These scripts as far as I know work only with linux.  I don't have a windows computer to test them on, and so don't know what would be needed to get them working.  
 
 IRCDump.py is for connecting to Twitch IRC and saving Twitch live chat to a log file located in /tmp/
 
@@ -21,3 +23,5 @@ J - increases font size
 0 - moves the chat position right
 ( - moves the chat position up
 ) - moves the chat position down.
+
+lua scripts should be placed in ~/.config/mpv/scripts
