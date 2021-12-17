@@ -2,6 +2,7 @@
 local opt = {
 	-- text styling
 --	font = 'Dejavu Sans Mono Book',
+	IRCDumpLocation = "/home/owner/PythonTestScripts/",
 	font = 'Twitter Color Emoji',
 	normal_font_size = 13,
 	large_font_size = 60,
@@ -168,9 +169,8 @@ function file_loaded()
 		else
 			print ("LOADING TWITCH LIVE IRC CHAT")
 			os.execute("sleep 16")
---			mp.commandv("run", "python3", "/home/owner/PythonTestScripts/IRCDump.py", videofilename)   
 			  local args = {
-				        "/home/owner/PythonTestScripts/IRCDump.py",
+				        opt.IRCDumpLocation.."IRCDump.py",
 				        videofilename,
 					    }
 			mp.command_native_async({
