@@ -5,7 +5,7 @@ IRCDump.py is for connecting to Twitch IRC and saving Twitch live chat to a log 
 
 TwitchChatLive.lua is for mpv to play IRCDumped file.
 
-If youtube-dl is installed, simply typing in mpv "twitch url", will load up the IRCdump + TwitchChatLive.lua.  In order to get TwitchChatLive.lua to work, you need to change the location in TwitchChatLive.lua
+If youtube-dl is installed, simply typing in mpv "twitch url", will load up the IRCdump + TwitchChatLive.lua.  In order to get TwitchChatLive.lua to work, you need to change the location of IRCDump.py in TwitchChatLive.lua
 
 twitch-chat.lua is for playing twitch VOD recorded chat with mpv
 
