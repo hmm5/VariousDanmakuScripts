@@ -16,8 +16,14 @@ def main():
 
 def ssl_socket(server, port):
     context = ssl.create_default_context(purpose=ssl.Purpose.CLIENT_AUTH)
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    context.set_ciphers("ECDHE-ECDSA-CHACHA20-POLY1305:AES256-GCM-SHA384")
+    context.set_ecdh_curve("secp256k1")
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    ssock = context.wrap_socket(sock)
+    ssock = context.wrap_socket(sock, do_handshake_on_connect=False)
     ssock.connect((server, port))
     return ssock
 
