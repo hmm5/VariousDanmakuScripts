@@ -2,7 +2,7 @@
 local opt = {
 	-- text styling
 --	font = 'Dejavu Sans Mono Book',
-	IRCDumpLocation = "/home/owner/PythonTestScripts/",
+	IRCDumpLocation = "/home/Temp/PythonTestScripts/",
 	font = 'Twitter Color Emoji',
 	normal_font_size = 13,
 	large_font_size = 60,
