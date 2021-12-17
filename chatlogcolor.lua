@@ -195,6 +195,10 @@ function file_loaded()
 		ON = true
 		mp.add_key_binding("j","chat",toggle)
 		mp.add_key_binding("J","enlarge-chat-fontsize",change_fontsize)
+		mp.add_key_binding("9","move-chat-position-left",move_position_left)
+		mp.add_key_binding("0","move-chat-position-right",move_position_right)
+		mp.add_key_binding("(","move-chat-position-up",move_position_up)
+		mp.add_key_binding(")","move-chat-position-down",move_position_down)
 		mp.msg.verbose("Reached end")
 	end
 end
@@ -270,5 +274,30 @@ function change_fontsize()
 	osd_refresh()
     end
 end
+
+function move_position_left()
+    print ("move_position_left()")
+    opt.posX = opt.posX-20
+    osd_refresh()
+end
+
+function move_position_right()
+    print ("move_position_right()")
+    opt.posX = opt.posX+20
+    osd_refresh()
+end
+
+function move_position_up()
+    print ("move_position_up()")
+    opt.posY = opt.posY-20
+    osd_refresh()
+end
+
+function move_position_down()
+    print ("move_position_down()")
+    opt.posY = opt.posY+20
+    osd_refresh()
+end
+
 
 mp.register_event("file-loaded", file_loaded)
