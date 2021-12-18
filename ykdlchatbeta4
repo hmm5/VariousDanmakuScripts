@@ -108,7 +108,7 @@ if (ReturnCode==0):
 					ErrorCount = ErrorCount + 1
 				if ErrorCount == 150:
 					print ("ERROR COUNT TOO GREAT >150")
-					subprocess.call(['notify-send','ERROR COUNT TOO GREAT >150 ','CHECK ', OutputFilename])
+					subprocess.call(['notify-send', '--urgency=critical', 'YKDLCHAT: ERROR COUNT TOO GREAT >150 ' + 'CHECK ' + OutputFilename])
 					ykdl.stdin.write('q')
 					time.sleep(1)
 					ykdl.send_signal(signal.SIGINT)
