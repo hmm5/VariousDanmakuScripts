@@ -282,7 +282,7 @@ function on_shutdown()
 end
 
 function osd_refresh()
-    if (opt.font_size==opt.normal_font_size) then
+--    if (opt.font_size==opt.normal_font_size) then
 	    osd.data = string.format('{\\pos(%d, %d)}{\\fn%s}{\\fs%d}',
 				opt.posX,
 				opt.posY,
@@ -296,7 +296,7 @@ function osd_refresh()
 --				opt.font,			
 --				opt.font_size
 --			)
-    end
+--    end
     for _,v in pairs(current) do
 	osd.data = osd.data..v[1].." "..format_string(v[2]).."\\N"
     end
