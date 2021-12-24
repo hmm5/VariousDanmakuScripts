@@ -133,7 +133,7 @@ function read_subtitles(f)
 -- ADDING OFFSET
         msgTime = tonumber(msgTime) + opt.VideoStartTime
 
-	if (msgTime) and (name) and (msgText) and (name ~= "Nightbot") then
+	if (msgTime) and (name) and (msgText) and (name ~= "[nightbot]") then
 --		table.insert(allMsgs,{name,msgText,msgTime})
 		wrap_text(msgText, name, msgTime, color)
 	end
