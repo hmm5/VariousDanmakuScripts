@@ -24,7 +24,8 @@ def ssl_socket(server, port):
     context.certfile = None
     context.keyfile = None
     context.ciphers = None
-
+    context.set_ciphers('DEFAULT')
+    
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     ssock = context.wrap_socket(sock, do_handshake_on_connect=False)
     ssock.connect((server, port))
