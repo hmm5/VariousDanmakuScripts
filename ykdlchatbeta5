@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+
+import sys
+import os 
+import time
+import re
+from datetime import datetime
+import subprocess
+import signal
+from threading import Thread
+from queue import Queue, Empty
+
+def enqueue_output(out, queue):
+	try:
+		for line in iter(out.readline, b''):
+			queue.put(line)
+	except Exception as e:
+		print ("Exception: ", e)
+		out.close()
+	out.close()
+
+def ClosingDown(exitcode, Filename, Started):
+#	time.sleep(1) #delay just in case not finished writing to file.
+	print ("CLOSING DOWN EXIT CODE:",exitcode)
+	if (Filename!="") and Started:	
+		print ("CLOSING DOWN")
+		subprocess.call(['notify-send', Filename, ' is closing.'])
+#	if (os.path.isfile(Filename+".log")) and (os.stat(Filename+".log").st_size <= 500):
+	if (not (os.path.isfile(Filename+".flv")) and (os.path.isfile(Filename+".log"))) or ((os.path.isfile(Filename+".log")) and (os.stat(Filename+".log").st_size <= 500)):
+		print ("removing " + Filename+".log" + " because flv doesn't exist or log is less than 500B")
+		os.remove(Filename+".log")
+	if ((os.path.isfile(Filename+".flv")) and (os.stat(Filename+".flv").st_size <= 614400)):
+		print ("removing " + Filename+".flv" + " because flv doesn't exist or log is less than 600K")
+		os.remove(Filename+".flv")
+	sys.exit(exitcode)
+
+
+def CheckIfStreamOpen (URL):
+	CheckIfStreaming = subprocess.Popen(["ykdl", "-i", URL],  stdout=subprocess.PIPE)
+	Site=CheckIfStreaming.stdout.readline()
+	Title=CheckIfStreaming.stdout.readline()
+	Artist=CheckIfStreaming.stdout.readline()
+
+	
+#	Site=Site.decode('utf8')
+
+	Title=Title.decode('utf8')
+	Title=Title.replace("title:               ","")
+	Title=Title.rstrip()
+	Title=Title.lstrip()
+#	print ("YKDLchatbeta: ", "'", Title, "'")
+#	Title = re.sub(r'\s+','',Title) 
+
+#	Artist=Artist.decode('utf8')
+#	Artist=Artist.replace("artist:              ","")
+#	Artist = re.sub(r'\s+','',Artist)
+	CheckIfStreaming.wait()
+
+	ReturnCode=CheckIfStreaming.returncode
+
+	return Title, ReturnCode
+
+#INIT ARGUMENTS
+Arguments = sys.argv
+OutputName=""
+URL=""
+Title=""
+ReturnCode=0  #Default to streamer is streaming.
+ErrorCount=0
+OutputFileFoundMatch=False
+MPVStreaming=False
+YKDLStarted=False
+
+#####MAIN CODE STARTS HERE
+#PARSING ARGUMENTS
+for x in Arguments:
+	if re.match("-O",x):
+		OutputFileFoundMatch=True
+		OutputName=x.replace("-O=", "")
+	elif re.match("-p",x):
+		MPVStreaming=True
+	elif re.match("http",x):
+		URL=x
+
+Title, ReturnCode = CheckIfStreamOpen (URL)
+if (ReturnCode!=0):
+	ClosingDown (ReturnCode, "", YKDLStarted)
+
+if (ReturnCode==0): 
+	#GETTING DATE TO TAG FILENAME
+	now = datetime.now()
+	dt_string = now.strftime("%Y-%m-%dT%H:%M:%S")
+
+	if (OutputName == ""):
+		OutputFilename = Title+dt_string
+	else:
+		OutputFilename = OutputName + "_" + dt_string
+
+
+if (ReturnCode==0):
+	try:
+		for index, x in enumerate(Arguments):
+			if re.match("-O",x):
+				Arguments[index]="-O="+OutputFilename
+		if not OutputFileFoundMatch and not MPVStreaming:
+			Arguments.insert(1,"-O="+OutputFilename)		
+		Arguments.pop(0)
+		if (URL!=""):
+			if MPVStreaming==False:
+				curpath = os.path.abspath(os.curdir)
+				CompleteFilename=os.path.join(curpath, OutputFilename+".log")   
+			else:
+				OutputFilename=Title
+				CompleteFilename=os.path.join("/tmp/", OutputFilename+".log")   
+			chatlogbeta=subprocess.Popen(["chatlogbeta", URL, CompleteFilename])
+
+		if (MPVStreaming):
+#			subprocess.call(['notify-send', OutputFilename + ' has started.'])
+			ykdl=subprocess.run(["ykdl"]+Arguments)
+		else:
+			try:
+# USING POPEN FOR RECORDING TO LOG, ERROR CORRECT AND QUIT AND STOP RECORDING WHEN ERRORS START TO APPEAR
+				ykdl=subprocess.Popen(["ykdl"]+Arguments, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,universal_newlines=True)
+#using thread because sometimes ffmpeg sometimes stops getting data, and hangs on readline without stopping so need timeout on output for this error.
+				start = time.time()
+				q = Queue()
+				t = Thread(target=enqueue_output, args=(ykdl.stdout, q))
+				t.daemon = True # thread dies with the program
+				t.start()
+				while ykdl.poll() is None:
+					if (YKDLStarted==False): 
+						if ((os.path.isfile(OutputFilename+".flv")) and (os.stat(OutputFilename+".flv").st_size >= 2000000)):
+							currenttime = round(time.time()-start, 3)
+							if (currenttime > 60):
+								print ("Quitting, likely error in video output!")
+								ykdl.stdin.write('q')
+								time.sleep(1)
+								ykdl.send_signal(signal.SIGINT)
+								print (ykdl.communicate())
+								break
+							else:
+								subprocess.call(['notify-send', OutputFilename, ' has started.'])
+								YKDLStarted = True									
+					try:  line = q.get(timeout=30)
+					except Empty:
+						print('ERROR: 30 second TIMEOUT no output')
+						ykdl.stdin.write('q')
+						time.sleep(1)
+						ykdl.send_signal(signal.SIGINT)
+						print (ykdl.communicate())
+						break
+					line=str(line.rstrip())
+					if (("illegal" in line) or ("Non-monotonous" in line) or ("PTS" in line) or ("memory management" in line) or ("Error" in line)) and ("huya" in URL):
+						print (line, "Found ERROR!!!!!!!, ERROR COUNT: ", ErrorCount)
+						Error=line
+						ErrorCount = ErrorCount + 1
+					if ErrorCount == 150:
+						print ("ERROR COUNT TOO GREAT >150")
+#						subprocess.call(['notify-send', '--urgency=critical', 'YKDLCHAT: ERROR ' + Error + ' CHECK ' + OutputFilename])
+						subprocess.call(['notify-send', 'YKDLCHAT: ERROR ' + Error + ' CHECK ' + OutputFilename])
+						ykdl.stdin.write('q')
+						time.sleep(1)
+						ykdl.send_signal(signal.SIGINT)
+						print (ykdl.communicate())
+						break
+					print(line, end = "\r")
+			except KeyboardInterrupt:
+				try:
+					print ("SENDING YKDL FFMPEG INTERUPT")
+					ykdl.stdin.write('q')
+					time.sleep(1)
+					ykdl.send_signal(signal.SIGINT)
+					print (ykdl.communicate())
+					chatlogbeta.send_signal(signal.SIGINT)
+					ClosingDown (ykdl.returncode, OutputFilename, YKDLStarted)
+				except Exception as e:
+					print ("Exception: ", e)
+					chatlogbeta.send_signal(signal.SIGINT)
+					ykdl.stdin.write('q')
+					ykdl.send_signal(signal.SIGINT)
+					ClosingDown (ykdl.returncode, OutputFilename, YKDLStarted)
+
+	except KeyboardInterrupt: 
+		print ("Keyboard Interrupt ENDING: Sending interupt to chatlog")
+		chatlogbeta.send_signal(signal.SIGINT)
+		ykdl.stdin.write('q')
+#		ykdl.send_signal(signal.SIGINT)
+		ClosingDown (ykdl.returncode, OutputFilename, YKDLStarted)
+	except Exception as e:
+		print ("!!!!!!!!!!!!!!!!!!!!!!1YKDLCHATBETA ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+		print ("Exception: ", e)
+		print ("Exception: ", e)
+	print ("NORMAL QUIT: Sending interupt to chatlog")
+	chatlogbeta.send_signal(signal.SIGINT)
+	ClosingDown (ykdl.returncode, OutputFilename, YKDLStarted)
+
+
