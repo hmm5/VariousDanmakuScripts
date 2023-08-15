@@ -11,13 +11,13 @@ If youtube-dl is installed, simply typing in mpv "twitch url", will load up the 
 
 twitch-chat.lua is for playing twitch VOD recorded chat with mpv
 
-ykdlchatbeta4 is a wrapper that runs ykdl and chatlogbeta.  If you e.g. type "ykdlchatbeta4 [a huya or douyu url]" it will begin recording both the video and logging the chat to a file.  It needs danmaku (https://github.com/THMonster/danmaku) and ykdl (https://github.com/SeaHOH/ykdl).
+ykdlchatbeta5 is a wrapper that runs ykdl and chatlogbeta.  If you e.g. type "ykdlchatbeta4 [a huya or douyu url]" it will begin recording both the video and logging the chat to a file.  It needs danmaku (https://github.com/THMonster/danmaku) and ykdl (https://github.com/SeaHOH/ykdl).
 chatlogcolor.lua is used by mpv to play back the log files recorded by ykdlchatbeta4.  If e.g. "ykdlchatbeta4 -p mpv [a huya or douyu url]" is used, mpv loading chatlogcolor will look for log file in /tmp/ playing a live stream with chat
 
 Thanks to https://github.com/morrah/mpv-twitch-chat-irc/ and https://codeberg.org/jouni/mpv-twitch-chat/commits/branch/master 
 
 mpv hotkeys using lua scripts:
-j - turns on and off chat
+j - turns on and off as well as swtiches between IRC line mode versus danmuku scrolling mode chat
 J - increases font size
 9 - moves the chat position left
 0 - moves the chat position right
