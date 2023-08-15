@@ -23,3 +23,6 @@ J - increases font size
 ) - moves the chat position down.
 
 lua scripts should be placed in ~/.config/mpv/scripts
+
+Example screenshot
+![Screenshot_2023-08-15_01-20-32](https://github.com/hmm5/VariousDanmakuScripts/assets/96269437/39cb2cb0-b90d-4295-8a07-ba2d56db4897)
