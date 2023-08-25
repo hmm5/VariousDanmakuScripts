@@ -8,7 +8,7 @@ local opt = {
 --	font = 'Noto Serif',
 	font = 'Twitter Color Emoji',
 	normal_font_size = 13,
-	large_font_size = 30,
+	large_font_size = 60,
 	font_size = 0,
 	font_colour = 'FFFFFF',
 	border_size = 2,
@@ -26,7 +26,7 @@ local opt = {
 local settings = {
     scrolling_fontsize=45,
     ass_style = "\\1c&HC8C8B4\\bord2",
-    speed = .1
+    speed = 1
 }
 
 local operation_hash = "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a"
@@ -34,7 +34,6 @@ local client = "kimne78kx3ncx6brgo4mv6wki5h1ko"
 
 local ban = {"Nightbot", "Moobot", "StreamElements"}
 local message_format = "{\\bord1\\an1\\fs10\\alphaH33}{\\1c%s}%s: {\\1cFFFFFF}%s\\N"
-
 
 function format_name(name, color, alphatrans)
 	local nameFormat = string.format(
@@ -49,11 +48,12 @@ function format_name(name, color, alphatrans)
 end
 
 function format_string(message)
+	local w, h = mp.get_osd_size()
 	local msgTextFormat = string.format(
 		'{\\1c&H%s&}{\\alpha&H%s&}{\\fs%d}{\\fn%s}{\\bord%f}%s',
 		opt.font_colour,
 		opt.alpha,
-		opt.font_size,
+		math.floor(h*(opt.font_size/1080)+0.5),
 		opt.font,
 		opt.border_size,
 		message
@@ -242,10 +242,11 @@ function pull_msgs()
 end
 
 function file_loaded()
+	quadrant = 0
 	local path = mp.get_property('path')
 	local pat_twitch_vod = 'twitch.tv/videos/(%d+)'
 	video_id = string.match(path, pat_twitch_vod)
-	opt.font_size = opt.normal_font_size
+	opt.font_size = settings.scrolling_fontsize
 	if video_id ~= nil then
 		require 'mp.msg'
 		mp.msg.verbose("I exist!")
@@ -259,7 +260,7 @@ function file_loaded()
 		
 		buffer = pull_msgs()
 
-		main = mp.add_periodic_timer(0.001, function ()
+		main = mp.add_periodic_timer(0.01, function ()
 		    local t = mp.get_property("time-pos")
 
 --		    if mp.get_property("core-idle") ~= "yes" and time ~= nil then
@@ -273,19 +274,21 @@ function file_loaded()
 			buffer = pull_msgs()
 		    elseif buffer[1][3] < time then
 			while (buffer[1] ~= nil and buffer[1][3] < time) do
-			    table.insert(current, buffer[1])
+			    
 			    if (ToggleSwitch == "Scrolling") then			    
 					addsub (buffer[1][2])
+			    else
+				    table.insert(current, buffer[1])	
+				    if killTime > 1 then
+					if table.maxn(current) < 45 then
+						killTime = killTime * 0.7
+					else 
+						print ("too much in the queue!  Shrinking Kill Time.  Queue size:", table.maxn(current))
+						killTime = killTime * 0.4
+					end
+				    end
 			    end
 			    table.remove(buffer, 1)
-			    if killTime > 1 then
-				if table.maxn(current) < 45 then
-					killTime = killTime * 0.7
-				else 
-					print ("too much in the queue!  Shrinking Kill Time.  Queue size:", table.maxn(current))
-					killTime = killTime * 0.4
-				end
-			    end
 			end
 			osd_refresh()
 		    end
@@ -312,19 +315,20 @@ end
 
 function osd_refresh()
     if (ToggleSwitch == "IRC") then
+	    local w, h = mp.get_osd_size()
 	    if (opt.font_size==opt.normal_font_size) then
 		    osd.data = string.format('{\\pos(%d, %d)}{\\fn%s}{\\fs%d}',
 					opt.posX,
 					opt.posY,
 					opt.font,			
-					opt.font_size
+					math.floor(h*(opt.font_size/1080)+0.5)
 			)
 	    else
 		    osd.data = string.format('{\\pos(%d, %d)}{\\fn%s}{\\fs%d}',
 					opt.posX/2,
 					opt.posY/2,
 					opt.font,			
-					opt.font_size
+					math.floor(h*(opt.font_size/1080)+0.5)
 			)
 	    end
 	    for _,v in pairs(current) do
@@ -415,26 +419,33 @@ function addsub(s)
 --print("adding scrolling sub", s)
   local w, h = mp.get_osd_size()
   if not w or not h then return end
+  
+  if quadrant==8 then
+	quadrant = 0
+  end
   local sub = {}
-  if get_table_size(subs) < 5 then
-	sub['y'] = math.random(15, ((h-45)/2))
+  if table.maxn(subs) < 10 then
+	sub['y'] = (math.random(1, (h/16)+(quadrant*h/8)))
   else  
-	sub['y'] = math.random(15, h-45)
+	sub['y'] = (math.random((opt.font_size/1080)*h, (h/8))+(quadrant*h/8))-((opt.font_size/1080)*h)
   end
   sub['x'] = w
   sub['content'] = s:gsub("^&br!", ""):gsub("&br!", "\\N")
---print ("s:", s)
   table.insert(subs, sub)
+  quadrant=quadrant+1
 end
 
 function render()
   local ass = assdraw.ass_new()
   ass:new_event()
   ass:append("")
+  local ass_style=format_string("")
   local w, h = mp.get_osd_size()
   total_amount_of_characters=""
   for key, sub in pairs(subs) do
-    total_amount_of_characters=total_amount_of_characters..sub['content']
+    if (sub['x']>0) then
+    	total_amount_of_characters=total_amount_of_characters..sub['content']
+    end
   end
   total_amount_of_characters_on_screen=string.len(total_amount_of_characters)
 
@@ -443,47 +454,72 @@ function render()
     local x = sub['x']
     local y = sub['y']
     local content = sub['content']
+    local numberofsubs=table.maxn(subs)
+    content = content
 
-    content = content:gsub("(>.-\\N)", "{\\1c&H35966f&}%1"):gsub("(\\N[^>])", "{\\1c&HC8C8B4}%1")
+--:gsub("(>.-\\N)", "{\\1c&H35966f&}%1"):gsub("(\\N[^>])", "{\\1c&HC8C8B4}%1")
 
+--format_string("")
     ass:new_event()
-    ass:append(string.format("{\\pos(%s,%s)%s}", x, y, settings.ass_style))
-    ass:append(string.format("{\\fs(%s)}",math.floor(h*(settings.scrolling_fontsize/1080)+0.5)))
+    ass:append(string.format("{\\pos(%s,%s)}%s", x, y, ass_style))
+--    ass:append(string.format("{\\fs(%s)}",math.floor(h*(settings.scrolling_fontsize/1080)+0.5)))
     ass:append(content)
 
   custom_speed_per_content=0
-  if total_amount_of_characters_on_screen > 800 then
-    custom_speed_per_content = custom_speed_per_content - (settings.speed)
+
+
+  length_of_content = string.len (sub['content'])
+  if length_of_content <= 25 then 
+    custom_speed_per_content = custom_speed_per_content - (settings.speed * .5)
+--  elseif length_of_content > 100 then 
+--    custom_speed_per_content = custom_speed_per_content - (settings.speed)
   end
-  if get_table_size(subs) > 20 then 
-    custom_speed_per_content = custom_speed_per_content - (settings.speed * 1.5)
-  elseif get_table_size(subs) > 25 then 
-    custom_speed_per_content = custom_speed_per_content - (settings.speed * 2.0)
+
+  custom_speed_per_content = custom_speed_per_content - (settings.speed * ((length_of_content % 4)*.075))    
+
+  if total_amount_of_characters_on_screen > 1500 then
+    custom_speed_per_content = custom_speed_per_content - (settings.speed)
+    if length_of_content > 250 and (numberofsubs>20) then
+      custom_speed_per_content = custom_speed_per_content - (settings.speed * total_amount_of_characters_on_screen/300)
+    end
+  end
+
+  if numberofsubs > 20 then 
+    custom_speed_per_content = custom_speed_per_content - (settings.speed * 1.25)
   else
     custom_speed_per_content = custom_speed_per_content - (settings.speed)
   end 
 
-  length_of_content = string.len (sub['content'])
-  if length_of_content/3 <= 8 then 
-    custom_speed_per_content = custom_speed_per_content - (settings.speed * .5)
-  elseif length_of_content > 200 then 
-    custom_speed_per_content = custom_speed_per_content - (settings.speed * .5)
+  if (total_amount_of_characters_on_screen > 300) or (numberofsubs > 50) then
+    if length_of_content % 2 == 0 then custom_speed_per_content = custom_speed_per_content - (settings.speed * 1.25) end
   end
-  custom_speed_per_content = custom_speed_per_content - (settings.speed * ((length_of_content % 4)*.075))    
 
-  if sub['x'] < -30 then 
+  if (sub['x'] < ((total_amount_of_characters_on_screen/1920)*w)) and (total_amount_of_characters_on_screen > 100) then
+--    print ("w: ",w)  
+    custom_speed_per_content = custom_speed_per_content - (settings.speed * total_amount_of_characters_on_screen/100)
+  elseif (sub['x'] < ((-50/1920)*w)) then
     custom_speed_per_content = custom_speed_per_content - (settings.speed * 3)
   end
+
+--  if (numberofsubs > 50) or ((total_amount_of_characters_on_screen > 500)) then 
+--    print ("total amount of chars on screen: ", total_amount_of_characters_on_screen)
+--    custom_speed_per_content = custom_speed_per_content - (settings.speed * 3)
+--  end
+
   custom_speed_per_content=custom_speed_per_content * (h/1080)
 
   sub['x'] = sub['x'] + (custom_speed_per_content)
 
-  if get_table_size(subs) > 25 then 
+
+  if length_of_content <= 7 then
+    if sub['x'] < -100 then table.remove(subs,key) end
+  elseif numberofsubs > 50 then 
+--  print ("subs table #:", get_table_size(subs))
     if sub['x'] < -200 then table.remove(subs,key) end
-  elseif total_amount_of_characters_on_screen > 800 then
+  elseif total_amount_of_characters_on_screen > 450 then
     if sub['x'] < -200 then table.remove(subs,key) end
   else
-    if sub['x'] < -2500 then table.remove(subs,key) end
+    if sub['x'] < -500 then table.remove(subs,key) end
   end
   end
   local w, h = mp.get_osd_size()
